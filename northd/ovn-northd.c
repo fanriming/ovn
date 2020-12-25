@@ -6951,7 +6951,7 @@ build_lswitch_flows(struct hmap *datapaths, struct hmap *ports,
         build_pre_lb(od, lflows, meter_groups, lbs);
         build_pre_stateful(od, lflows);
         build_acls(od, lflows, port_groups);
-        build_chain(od, lflows, ports);
+        //build_chain(od, lflows, ports);
         build_qos(od, lflows);
         build_lb(od, lflows);
         build_stateful(od, lflows, lbs);
