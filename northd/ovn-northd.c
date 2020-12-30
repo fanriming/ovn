@@ -5750,7 +5750,7 @@ build_chain(struct ovn_datapath *od, struct hmap *lflows, struct hmap *ports)
         */
         struct eth_addr traffic_logical_port_ea;
         //ovs_be32 traffic_logical_port_ip;
-        VLOG_INFO("Checking ports \n");
+        //VLOG_INFO("Checking ports \n");
         //VLOG_INFO("Addresses: %s\n", traffic_port->nbsp);
         if (traffic_port->nbsp->addresses == NULL){
             static struct vlog_rate_limit rl =
@@ -5765,7 +5765,7 @@ build_chain(struct ovn_datapath *od, struct hmap *lflows, struct hmap *ports)
         if (ovs_scan(traffic_port->nbsp->addresses[0],
                  ETH_ADDR_SCAN_FMT,
                  ETH_ADDR_SCAN_ARGS(traffic_logical_port_ea))){
-                 VLOG_INFO("Static address set\n");
+                 //VLOG_INFO("Static address set\n");
         } else if (is_dynamic_lsp_address(traffic_port->nbsp->addresses[0])) {
             ovs_scan(traffic_port->nbsp->dynamic_addresses,
                  ETH_ADDR_SCAN_FMT,
