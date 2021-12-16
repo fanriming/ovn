@@ -3623,12 +3623,15 @@ nbctl_lr_policy_add(struct ctl_context *ctx)
 
     /* Check if same routing policy already exists.
      * A policy is uniquely identified by priority and match */
+    bool may_exist = !!shash_find(&ctx->options, "--may-exist");
     for (int i = 0; i < lr->n_policies; i++) {
         const struct nbrec_logical_router_policy *policy = lr->policies[i];
         if (policy->priority == priority &&
             !strcmp(policy->match, ctx->argv[3])) {
-            ctl_error(ctx, "Same routing policy already existed on the "
-                      "logical router %s.", ctx->argv[1]);
+            if (!may_exist) {
+                ctl_error(ctx, "Same routing policy already existed on the "
+                          "logical router %s.", ctx->argv[1]);
+            }
         }
     }
     if (ctx->argc == 6) {
@@ -3705,7 +3708,9 @@ nbctl_lr_policy_del(struct ctl_context *ctx)
                 }
             }
             if (n_policies == lr->n_policies) {
-                ctl_error(ctx, "Logical router policy uuid is not found.");
+                if (!shash_find(&ctx->options, "--if-exists")) {
+                    ctl_error(ctx, "Logical router policy uuid is not found.");
+                }
                 return;
             }
 
@@ -6363,9 +6368,9 @@ static const struct ctl_command_syntax nbctl_commands[] = {
 
     /* Policy commands */
     { "lr-policy-add", 4, 5, "ROUTER PRIORITY MATCH ACTION [NEXTHOP]", NULL,
-        nbctl_lr_policy_add, NULL, "", RW },
+      NULL, nbctl_lr_policy_add, NULL, "--may-exist", RW },
     { "lr-policy-del", 1, 3, "ROUTER [{PRIORITY | UUID} [MATCH]]", NULL,
-        nbctl_lr_policy_del, NULL, "", RW },
+        nbctl_lr_policy_del, NULL, "--if-exists", RW },
     { "lr-policy-list", 1, 1, "ROUTER", NULL, nbctl_lr_policy_list, NULL,
        "", RO },
 
