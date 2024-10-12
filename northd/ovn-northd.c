@@ -5031,11 +5031,18 @@ build_pre_acls(struct ovn_datapath *od, struct hmap *port_groups,
          *
          * Not to do conntrack on ND and ICMP destination
          * unreachable packets. */
+        // ovn_lflow_add(lflows, od, S_SWITCH_IN_PRE_ACL, 110,
+        //               "nd || nd_rs || nd_ra || mldv1 || mldv2 || "
+        //               "(udp && udp.src == 546 && udp.dst == 547)", "next;");
+        // ovn_lflow_add(lflows, od, S_SWITCH_OUT_PRE_ACL, 110,
+        //               "nd || nd_rs || nd_ra || mldv1 || mldv2 || "
+        //               "(udp && udp.src == 546 && udp.dst == 547)", "next;");
+
         ovn_lflow_add(lflows, od, S_SWITCH_IN_PRE_ACL, 110,
-                      "nd || nd_rs || nd_ra || mldv1 || mldv2 || "
+                      "mldv1 || mldv2 || "
                       "(udp && udp.src == 546 && udp.dst == 547)", "next;");
         ovn_lflow_add(lflows, od, S_SWITCH_OUT_PRE_ACL, 110,
-                      "nd || nd_rs || nd_ra || mldv1 || mldv2 || "
+                      "mldv1 || mldv2 || "
                       "(udp && udp.src == 546 && udp.dst == 547)", "next;");
 
         /* Ingress and Egress Pre-ACL Table (Priority 100).
@@ -5147,12 +5154,17 @@ build_pre_lb(struct ovn_datapath *od, struct hmap *lflows,
              struct shash *meter_groups, struct hmap *lbs)
 {
     /* Do not send ND packets to conntrack */
+    // ovn_lflow_add(lflows, od, S_SWITCH_IN_PRE_LB, 110,
+    //               "nd || nd_rs || nd_ra || mldv1 || mldv2",
+    //               "next;");
+    // ovn_lflow_add(lflows, od, S_SWITCH_OUT_PRE_LB, 110,
+    //               "nd || nd_rs || nd_ra || mldv1 || mldv2",
+    //               "next;");
+
     ovn_lflow_add(lflows, od, S_SWITCH_IN_PRE_LB, 110,
-                  "nd || nd_rs || nd_ra || mldv1 || mldv2",
-                  "next;");
+                  "mldv1 || mldv2", "next;");
     ovn_lflow_add(lflows, od, S_SWITCH_OUT_PRE_LB, 110,
-                  "nd || nd_rs || nd_ra || mldv1 || mldv2",
-                  "next;");
+                  "mldv1 || mldv2", "next;");
 
     /* Do not send service monitor packets to conntrack. */
     char *svc_check_match = xasprintf("eth.dst == %s", svc_monitor_mac);
@@ -5684,9 +5696,11 @@ build_acls(struct ovn_datapath *od, struct hmap *lflows,
          *
          * Not to do conntrack on ND packets. */
         ovn_lflow_add(lflows, od, S_SWITCH_IN_ACL, UINT16_MAX,
-                      "nd || nd_ra || nd_rs || mldv1 || mldv2", "next;");
+//                      "nd || nd_ra || nd_rs || mldv1 || mldv2", "next;");
+                      "mldv1 || mldv2", "next;");
         ovn_lflow_add(lflows, od, S_SWITCH_OUT_ACL, UINT16_MAX,
-                      "nd || nd_ra || nd_rs || mldv1 || mldv2", "next;");
+ //                     "nd || nd_ra || nd_rs || mldv1 || mldv2", "next;");
+                      "mldv1 || mldv2", "next;");
     }
 
     /* Add next rule for localnet port */
