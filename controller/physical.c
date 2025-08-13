@@ -1283,6 +1283,10 @@ consider_mc_group(enum mf_field_id mff_ovn_geneve,
     struct sset remote_chassis = SSET_INITIALIZER(&remote_chassis);
     struct match match;
 
+    // 保存localnet的下标数组
+    size_t *localnet_port_index_list = xmalloc(sizeof(size_t) * mc->n_ports);
+    size_t localnet_port_index_list_len = 0;
+
     match_init_catchall(&match);
     match_set_metadata(&match, htonll(dp_key));
     match_set_reg(&match, MFF_LOG_OUTPORT - MFF_REG0, mc->tunnel_key);
@@ -1314,6 +1318,14 @@ consider_mc_group(enum mf_field_id mff_ovn_geneve,
             continue;
         }
 
+        // 保存localnet port的索引
+        // 把localnet的resubmit排在后面，因为localnet的resubmit后续规则可能会修改数据包的vlan，导致排在localnet后面的端口收到带vlan的报文
+        if (!strcmp(port->type, "localnet")) {
+            localnet_port_index_list[localnet_port_index_list_len] = i;
+            localnet_port_index_list_len++;
+            continue;
+        }
+
         int zone_id = simap_get(ct_zones, port->logical_port);
         if (zone_id) {
             put_load(zone_id, MFF_LOG_CT_ZONE, 0, 32, &ofpacts);
@@ -1338,6 +1350,30 @@ consider_mc_group(enum mf_field_id mff_ovn_geneve,
             sset_add(&remote_chassis, port->chassis->name);
         }
     }
+    // 添加localnet port的resubmit规则
+    for (size_t i = 0; i < localnet_port_index_list_len; i++) {
+        size_t index = localnet_port_index_list[i];
+        struct sbrec_port_binding *port = mc->ports[index];
+
+        int zone_id = simap_get(ct_zones, port->logical_port);
+        if (zone_id) {
+            put_load(zone_id, MFF_LOG_CT_ZONE, 0, 32, &ofpacts);
+        }
+        if (simap_contains(&localvif_to_ofport,
+                           (port->parent_port && *port->parent_port)
+                           ? port->parent_port : port->logical_port)) {
+            put_load(port->tunnel_key, MFF_LOG_OUTPORT, 0, 32, &ofpacts);
+            put_resubmit(OFTABLE_CHECK_LOOPBACK, &ofpacts);
+        } else if (port->chassis && !get_localnet_port(local_datapaths,
+                                         mc->datapath->tunnel_key)) {
+            /* Add remote chassis only when localnet port not exist,
+             * otherwise multicast will reach remote ports through localnet
+             * port. */
+            sset_add(&remote_chassis, port->chassis->name);
+        }
+
+    }
+
 
     /* Table 33, priority 100.
      * =======================
@@ -1394,6 +1430,7 @@ consider_mc_group(enum mf_field_id mff_ovn_geneve,
                             &match, &remote_ofpacts, &mc->header_.uuid);
         }
     }
+    free(localnet_port_index_list);
     ofpbuf_uninit(&ofpacts);
     ofpbuf_uninit(&remote_ofpacts);
     sset_destroy(&remote_chassis);
